@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Personas - Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/protect.js"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div class="max-w-6xl mx-auto p-6">
+        <h1 class="text-4xl font-bold text-blue-700 mb-6">👥 Gestión de Personas</h1>
+
+        <!-- Botón solo para Administrador -->
+        <div id="adminActions" class="hidden mb-6">
+            <button onclick="mostrarModalCrear()"
+                class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700">
+                + Nueva Persona
+            </button>
+        </div>
+
+        <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- MODAL CREAR / EDITAR -->
+    <div id="modalPersona" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl w-full max-w-md">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6">Nueva Persona</h2>
+
+            <input id="cedula" placeholder="Cédula" class="w-full border p-3 rounded-lg mb-3">
+            <input id="nombre" placeholder="Nombre completo" class="w-full border p-3 rounded-lg mb-3">
+            <input id="telefono" placeholder="Teléfono (opcional)" class="w-full border p-3 rounded-lg mb-6">
+
+            <div class="flex gap-3">
+                <button onclick="guardarPersona()"
+                    class="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium">Guardar</button>
+                <button onclick="cerrarModal()" class="flex-1 bg-gray-300 py-3 rounded-lg">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        checkAuth();
+        const role = localStorage.getItem("role");
+
+        // Mostrar botón solo para Admin
+        if (role === "Administrador") {
+            document.getElementById("adminActions").classList.remove("hidden");
+        }
+
+        let editandoId = null;
+
+        async function cargarPersonas() {
+            const res = await apiFetch("http://127.0.0.1:8000/personas/");
+            const personas = await res.json();
+
+            document.getElementById("personasContainer").innerHTML = personas.map(p => `
+        <div class="bg-white p-6 rounded-xl shadow">
+          <h3 class="font-bold">${p.Nombre}</h3>
+          <p class="text-gray-600">Cédula: ${p.Cedula}</p>
+          ${p.Telefono ? `<p class="text-gray-600">Tel: ${p.Telefono}</p>` : ''}
+          
+          ${role === "Administrador" ? `
+          <div class="mt-4 flex gap-3">
+            <button onclick="editarPersona(${p.Id})" class="text-blue-600 text-sm">Editar</button>
+            <button onclick="eliminarPersona(${p.Id})" class="text-red-600 text-sm">Eliminar</button>
+          </div>` : ''}
+        </div>
+      `).join("");
+        }
+
+        function mostrarModalCrear() {
+            editandoId = null;
+            document.getElementById("modalTitle").textContent = "Nueva Persona";
+            document.getElementById("cedula").value = "";
+            document.getElementById("nombre").value = "";
+            document.getElementById("telefono").value = "";
+            document.getElementById("modalPersona").classList.remove("hidden");
+        }
+
+        function editarPersona(id) {
+            // Aquí puedes cargar los datos actuales si quieres (opcional)
+            editandoId = id;
+            document.getElementById("modalTitle").textContent = "Editar Persona";
+            document.getElementById("modalPersona").classList.remove("hidden");
+        }
+
+        async function guardarPersona() {
+            const data = {
+                Cedula: document.getElementById("cedula").value,
+                Nombre: document.getElementById("nombre").value,
+                Telefono: document.getElementById("telefono").value || null
+            };
+
+            let res;
+            if (editandoId) {
+                res = await apiFetch(`http://127.0.0.1:8000/personas/${editandoId}`, {
+                    method: "PUT",
+                    body: JSON.stringify(data)
+                });
+            } else {
+                res = await apiFetch("http://127.0.0.1:8000/personas/", {
+                    method: "POST",
+                    body: JSON.stringify(data)
+                });
+            }
+
+            if (res.ok) {
+                alert("✅ Persona guardada correctamente");
+                cerrarModal();
+                cargarPersonas();
+            } else {
+                alert("Error al guardar la persona");
+            }
+        }
+
+        async function eliminarPersona(id) {
+            if (!confirm("¿Estás seguro de eliminar esta persona?")) return;
+
+            const res = await apiFetch(`http://127.0.0.1:8000/personas/${id}`, { method: "DELETE" });
+            if (res.ok) {
+                cargarPersonas();
+            }
+        }
+
+        function cerrarModal() {
+            document.getElementById("modalPersona").classList.add("hidden");
+        }
+
+        // Cargar al iniciar
+        cargarPersonas();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Libros | Biblioteca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <script src="js/protect.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f3e8;
+            background-image: radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.08) 2%, transparent 2.5%);
+            background-size: 24px 24px;
+        }
+        .card {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.1);
+            border-color: rgba(180, 130, 70, 0.3);
+        }
+        .btn-primary {
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        input:focus, select:focus {
+            outline: none;
+            ring: 2px solid #d97706;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header con navegación -->
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <a href="dashboard.html" class="text-amber-700 hover:text-amber-900 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </a>
+                <h1 class="text-3xl md:text-4xl font-bold text-amber-800">📚 Catálogo de Libros</h1>
+            </div>
+            <div id="adminActions" class="hidden">
+                <button id="btnNuevoLibro" class="btn-primary bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Nuevo Libro
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid de libros -->
+        <div id="librosContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- MODAL CREAR/EDITAR LIBRO -->
+    <div id="modalLibro" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-amber-100">
+            <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-5 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span>Nuevo Libro</span>
+            </h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Código del libro</label>
+                    <input type="number" id="cod_libro" placeholder="Ej: 1001" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del libro</label>
+                    <input type="text" id="nombre_libro" placeholder="Título completo" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Autor</label>
+                    <input type="text" id="autor" placeholder="Nombre del autor" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de publicación</label>
+                    <input type="date" id="fecha_pub" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="es_infantil" class="w-4 h-4 text-amber-600 focus:ring-amber-400 border-gray-300 rounded">
+                    <label for="es_infantil" class="text-sm font-medium text-gray-700">Es libro infantil</label>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button id="btnGuardarLibro" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium transition">Guardar</button>
+                <button id="btnCancelarModal" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg font-medium transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Verificar autenticación y mostrar botones de admin
+        checkAuth();
+        const role = localStorage.getItem("role");
+        if (role === "Administrador") {
+            document.getElementById("adminActions").classList.remove("hidden");
+        }
+
+        let editandoLibroId = null;
+
+        // Función auxiliar para manejar fetch con token
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem("token");
+            const headers = {
+                "Content-Type": "application/json",
+                ...(token && { "Authorization": `Bearer ${token}` }),
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401) {
+                localStorage.removeItem("token");
+                window.location.href = "/login.html";
+            }
+            return response;
+        }
+
+        // Escapar HTML para evitar XSS
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Cargar todos los libros y pintarlos
+        async function cargarLibros() {
+            const res = await apiFetch("http://127.0.0.1:8000/libros/");
+            if (res.ok) {
+                const libros = await res.json();
+                const container = document.getElementById("librosContainer");
+                const role = localStorage.getItem("role");
+
+                container.innerHTML = libros.map(l => `
+                    <div class="card bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-xs font-mono bg-amber-100 text-amber-800 px-2 py-1 rounded">Cod: ${l.Cod_libro}</span>
+                            <span class="text-xs ${l.Es_Infantil ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'} px-2 py-1 rounded-full font-medium">
+                                ${l.Es_Infantil ? '👶 Infantil' : '📖 General'}
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(l.Nombre_libro)}</h3>
+                        <p class="text-gray-600 text-sm mb-4 italic">✍️ ${escapeHtml(l.Autor || "Autor desconocido")}</p>
+                        ${l.Fecha_publicacion ? `<p class="text-gray-500 text-xs mb-4">📅 ${l.Fecha_publicacion}</p>` : ''}
+                        ${role === "Administrador" ? `
+                            <div class="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                                <button onclick="prepararEdicionLibro(${l.Id})" class="flex-1 bg-amber-50 text-amber-600 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 hover:text-white transition">Editar</button>
+                                <button onclick="eliminarLibro(${l.Id})" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-600 hover:text-white transition">Eliminar</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join("");
+            } else {
+                console.error("Error al cargar libros");
+            }
+        }
+
+        // Mostrar modal para crear nuevo libro
+        function mostrarModalCrear() {
+            editandoLibroId = null;
+            document.getElementById("modalTitle").querySelector("span").textContent = "Nuevo Libro";
+            document.getElementById("cod_libro").value = "";
+            document.getElementById("nombre_libro").value = "";
+            document.getElementById("autor").value = "";
+            document.getElementById("fecha_pub").value = "";
+            document.getElementById("es_infantil").checked = false;
+            document.getElementById("modalLibro").classList.remove("hidden");
+        }
+
+        // Cargar datos del libro para edición
+        async function prepararEdicionLibro(id) {
+            editandoLibroId = id;
+            try {
+                const res = await apiFetch(`http://127.0.0.1:8000/libros/${id}`);
+                if (res.ok) {
+                    const libro = await res.json();
+                    document.getElementById("modalTitle").querySelector("span").textContent = "Editar Libro";
+                    document.getElementById("cod_libro").value = libro.Cod_libro;
+                    document.getElementById("nombre_libro").value = libro.Nombre_libro;
+                    document.getElementById("autor").value = libro.Autor || "";
+                    document.getElementById("fecha_pub").value = libro.Fecha_publicacion || "";
+                    document.getElementById("es_infantil").checked = libro.Es_Infantil || false;
+                    document.getElementById("modalLibro").classList.remove("hidden");
+                } else {
+                    alert("No se pudo obtener el libro para editar");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error de conexión");
+            }
+        }
+
+        // Validar que la fecha no sea futura
+        function isFechaFutura(fechaStr) {
+            if (!fechaStr) return false;
+            const fecha = new Date(fechaStr);
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            return fecha > hoy;
+        }
+
+        // Guardar (crear o actualizar)
+        async function guardarLibro() {
+            const cod_libro = parseInt(document.getElementById("cod_libro").value);
+            const nombre_libro = document.getElementById("nombre_libro").value.trim();
+            const autor = document.getElementById("autor").value.trim();
+            const fecha_publicacion = document.getElementById("fecha_pub").value || null;
+            const es_infantil = document.getElementById("es_infantil").checked;
+
+            // Validaciones en frontend antes de enviar
+            if (!cod_libro || !nombre_libro) {
+                alert("❌ El código y el nombre del libro son obligatorios.");
+                return;
+            }
+
+            if (autor === "") {
+                alert("❌ El autor es obligatorio. Por favor, ingrese el nombre del autor.");
+                return;
+            }
+
+            if (fecha_publicacion && isFechaFutura(fecha_publicacion)) {
+                alert("❌ La fecha de publicación no puede ser futura. Por favor, ingrese una fecha igual o anterior a hoy.");
+                return;
+            }
+
+            const data = {
+                Cod_libro: cod_libro,
+                Nombre_libro: nombre_libro,
+                Autor: autor,
+                Fecha_publicacion: fecha_publicacion,
+                Es_Infantil: es_infantil
+            };
+
+            const url = editandoLibroId
+                ? `http://127.0.0.1:8000/libros/${editandoLibroId}`
+                : "http://127.0.0.1:8000/libros/";
+            const method = editandoLibroId ? "PUT" : "POST";
+
+            try {
+                const res = await apiFetch(url, {
+                    method: method,
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    alert(editandoLibroId ? "✅ Libro actualizado correctamente" : "✅ Libro creado correctamente");
+                    cerrarModal();
+                    cargarLibros();
+                } else {
+                    // Intentar obtener el detalle del error de forma robusta
+                    let errorMsg = "No se pudo guardar el libro.";
+                    try {
+                        const err = await res.json();
+                        if (err.detail) {
+                            if (typeof err.detail === "string") errorMsg = err.detail;
+                            else if (Array.isArray(err.detail) && err.detail.length > 0) {
+                                errorMsg = err.detail[0].msg || "Error de validación.";
+                            }
+                        } else {
+                            errorMsg = JSON.stringify(err);
+                        }
+                    } catch (e) {
+                        // Si no es JSON, obtener texto plano
+                        errorMsg = await res.text();
+                    }
+                    alert(`❌ ${errorMsg}`);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("❌ Error de conexión con el servidor. Verifique que el backend esté corriendo.");
+            }
+        }
+
+        // Eliminar libro
+        async function eliminarLibro(id) {
+            if (!confirm("¿Estás seguro de eliminar este libro?")) return;
+            const res = await apiFetch(`http://127.0.0.1:8000/libros/${id}`, {
+                method: "DELETE"
+            });
+            if (res.ok) {
+                cargarLibros();
+            } else {
+                let errorMsg = "No se pudo eliminar el libro.";
+                try {
+                    const err = await res.json();
+                    errorMsg = err.detail || errorMsg;
+                } catch (e) {
+                    errorMsg = await res.text();
+                }
+                alert(`❌ ${errorMsg}`);
+            }
+        }
+
+        function cerrarModal() {
+            document.getElementById("modalLibro").classList.add("hidden");
+            editandoLibroId = null;
+        }
+
+        // Event listeners
+        document.getElementById("btnNuevoLibro").addEventListener("click", mostrarModalCrear);
+        document.getElementById("btnGuardarLibro").addEventListener("click", guardarLibro);
+        document.getElementById("btnCancelarModal").addEventListener("click", cerrarModal);
+
+        // Cargar libros al inicio
+        cargarLibros();
+    </script>
+</body>
+</html>

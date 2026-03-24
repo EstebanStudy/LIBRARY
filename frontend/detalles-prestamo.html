@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalles de Préstamos | Biblioteca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <script src="js/protect.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f3e8;
+            background-image: radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.08) 2%, transparent 2.5%);
+            background-size: 24px 24px;
+        }
+        .card {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.1);
+            border-color: rgba(180, 130, 70, 0.3);
+        }
+        .btn-primary {
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        input:focus {
+            outline: none;
+            ring: 2px solid #d97706;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header con navegación -->
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <a href="dashboard.html" class="text-amber-700 hover:text-amber-900 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </a>
+                <h1 class="text-3xl md:text-4xl font-bold text-amber-800">📋 Detalles de Préstamos</h1>
+            </div>
+            <div id="adminActions" class="hidden">
+                <button onclick="mostrarModalCrear()" class="btn-primary bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Nuevo Detalle
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid de detalles -->
+        <div id="detallesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- MODAL CREAR/EDITAR DETALLE -->
+    <div id="modalDetalle" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-amber-100">
+            <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-5 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span>Nuevo Detalle</span>
+            </h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ID Préstamo</label>
+                    <input id="prestamoId" type="number" placeholder="Ej: 10" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ID Copia del Libro</label>
+                    <input id="copiaId" type="number" placeholder="Ej: 5" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Entrega Esperada</label>
+                    <input id="fechaEntrega" type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="guardarDetalle()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium transition">Guardar</button>
+                <button onclick="cerrarModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg font-medium transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        checkAuth();
+        const role = localStorage.getItem("role");
+        let editandoId = null;
+
+        if (role === "Administrador") {
+            document.getElementById("adminActions").classList.remove("hidden");
+        }
+
+        async function cargarDetalles() {
+            const res = await apiFetch("http://127.0.0.1:8000/detalles-prestamo/");
+            if (!res.ok) return;
+
+            const detalles = await res.json();
+            const container = document.getElementById("detallesContainer");
+
+            container.innerHTML = detalles.map(d => `
+                <div class="card bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all border-l-4 ${d.Fecha_devolucion_real ? 'border-green-500' : 'border-amber-500'}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <p class="text-xs font-mono text-gray-400">ID: ${d.Id}</p>
+                            <p class="text-lg font-bold text-gray-800 mt-1">Préstamo #${d.Prestamo}</p>
+                            <p class="text-sm text-gray-600 italic">📖 Copia ID: ${d.Copia}</p>
+                            <div class="mt-3 text-sm">
+                                <p class="text-gray-500 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                    Esperado: <span class="font-medium text-gray-800">${d.Fecha_entrega_esperada ? d.Fecha_entrega_esperada.split('T')[0] : 'No definida'}</span>
+                                </p>
+                                ${d.Fecha_devolucion_real ? 
+                                    `<p class="text-green-600 flex items-center gap-1 mt-1">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        Devuelto: ${d.Fecha_devolucion_real.split('T')[0]}
+                                    </p>` : 
+                                    `<p class="text-amber-600 flex items-center gap-1 mt-1">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        Pendiente de devolución
+                                    </p>`
+                                }
+                            </div>
+                        </div>
+                        ${role === "Administrador" ? `
+                        <div class="flex flex-col gap-1 ml-4">
+                            <button onclick="prepararEdicionDetalle(${d.Id})" class="text-amber-600 hover:text-amber-800 text-sm font-medium">Editar</button>
+                            <button onclick="eliminarDetalle(${d.Id})" class="text-red-600 hover:text-red-800 text-sm font-medium">Eliminar</button>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function mostrarModalCrear() {
+            editandoId = null;
+            document.getElementById("modalTitle").querySelector("span").textContent = "Nuevo Detalle";
+            document.getElementById("prestamoId").value = "";
+            document.getElementById("copiaId").value = "";
+            document.getElementById("fechaEntrega").value = "";
+            document.getElementById("modalDetalle").classList.remove("hidden");
+        }
+
+        async function prepararEdicionDetalle(id) {
+            editandoId = id;
+            try {
+                const res = await apiFetch(`http://127.0.0.1:8000/detalles-prestamo/${id}`);
+                if (res.ok) {
+                    const detalle = await res.json();
+                    document.getElementById("prestamoId").value = detalle.Prestamo;
+                    document.getElementById("copiaId").value = detalle.Copia;
+                    if (detalle.Fecha_entrega_esperada) {
+                        document.getElementById("fechaEntrega").value = detalle.Fecha_entrega_esperada.split('T')[0];
+                    }
+                    document.getElementById("modalTitle").querySelector("span").textContent = "Editar Detalle";
+                    document.getElementById("modalDetalle").classList.remove("hidden");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("No se pudo cargar el detalle");
+            }
+        }
+
+        async function guardarDetalle() {
+            const data = {
+                Prestamo: parseInt(document.getElementById("prestamoId").value),
+                Copia: parseInt(document.getElementById("copiaId").value),
+                Fecha_entrega_esperada: document.getElementById("fechaEntrega").value
+            };
+
+            if (isNaN(data.Prestamo) || isNaN(data.Copia)) {
+                alert("ID Préstamo y Copia deben ser números válidos");
+                return;
+            }
+
+            const url = editandoId 
+                ? `http://127.0.0.1:8000/detalles-prestamo/${editandoId}` 
+                : "http://127.0.0.1:8000/detalles-prestamo/";
+            const method = editandoId ? "PUT" : "POST";
+
+            try {
+                const res = await apiFetch(url, {
+                    method: method,
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    cerrarModal();
+                    cargarDetalles();
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + JSON.stringify(err.detail || "No se pudo guardar"));
+                }
+            } catch (error) {
+                alert("Error de conexión con el servidor");
+            }
+        }
+
+        async function eliminarDetalle(id) {
+            if (!confirm("¿Deseas eliminar este registro de detalle?")) return;
+            const res = await apiFetch(`http://127.0.0.1:8000/detalles-prestamo/${id}`, { method: "DELETE" });
+            if (res.ok) cargarDetalles();
+            else alert("No se pudo eliminar el detalle");
+        }
+
+        function cerrarModal() {
+            document.getElementById("modalDetalle").classList.add("hidden");
+        }
+
+        cargarDetalles();
+    </script>
+</body>
+</html>

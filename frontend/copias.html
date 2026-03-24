@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copias | Biblioteca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <script src="js/protect.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f3e8;
+            background-image: radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.08) 2%, transparent 2.5%);
+            background-size: 24px 24px;
+        }
+        .card {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.1);
+            border-color: rgba(180, 130, 70, 0.3);
+        }
+        .btn-primary {
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        input:focus, select:focus {
+            outline: none;
+            ring: 2px solid #d97706;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header con navegación -->
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <a href="dashboard.html" class="text-amber-700 hover:text-amber-900 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </a>
+                <h1 class="text-3xl md:text-4xl font-bold text-amber-800">📖 Gestión de Copias</h1>
+            </div>
+            <div id="adminActions" class="hidden">
+                <button onclick="mostrarModalCrear()" class="btn-primary bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Nueva Copia
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid de copias -->
+        <div id="copiasContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- MODAL CREAR/EDITAR -->
+    <div id="modalCopia" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-amber-100">
+            <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-5 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                </svg>
+                <span>Nueva Copia</span>
+            </h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ID del Libro</label>
+                    <input id="libroId" type="number" placeholder="Ej: 5" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+                    <input id="notas" type="text" placeholder="Comentarios adicionales" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <select id="disponible" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                        <option value="true">Disponible</option>
+                        <option value="false">Prestada / No disponible</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="guardarCopia()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium transition">Guardar</button>
+                <button onclick="cerrarModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg font-medium transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        checkAuth();
+        const role = localStorage.getItem("role");
+
+        if (role !== "Administrador") {
+            alert("No tienes permisos para acceder a esta página");
+            window.location.href = "dashboard.html";
+        } else {
+            document.getElementById("adminActions").classList.remove("hidden");
+        }
+
+        let editandoId = null;
+
+        async function cargarCopias() {
+            const res = await apiFetch("http://127.0.0.1:8000/copias/");
+            if (!res.ok) return;
+
+            const copias = await res.json();
+            const container = document.getElementById("copiasContainer");
+
+            if (copias.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">No hay copias registradas</div>`;
+                return;
+            }
+
+            container.innerHTML = copias.map(c => {
+                const nombreLibro = c.libro_rel?.Nombre_libro || `Libro ID ${c.Libro}`;
+                const estadoClass = c.Disponible ? "text-green-600" : "text-red-600";
+                const estadoTexto = c.Disponible ? "Disponible" : "No disponible";
+
+                return `
+                    <div class="card bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all border-l-4 ${c.Disponible ? 'border-green-500' : 'border-red-500'}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="text-xs font-mono text-gray-400">Copia #${c.Id}</p>
+                                <p class="font-semibold text-lg text-gray-800 mt-1">📘 ${escapeHtml(nombreLibro)}</p>
+                                <p class="text-sm text-gray-500">ID Libro: ${c.Libro}</p>
+                                ${c.Notas ? `<p class="text-xs text-gray-400 mt-1 italic">📝 ${escapeHtml(c.Notas)}</p>` : ''}
+                                <p class="text-sm mt-2 font-medium ${estadoClass}">${estadoTexto}</p>
+                            </div>
+                            <div class="flex gap-2 ml-4">
+                                <button onclick="prepararEdicion(${c.Id})" class="text-amber-600 hover:text-amber-800 text-sm font-medium">Editar</button>
+                                <button onclick="eliminarCopia(${c.Id})" class="text-red-600 hover:text-red-800 text-sm font-medium">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function mostrarModalCrear() {
+            editandoId = null;
+            document.getElementById("modalTitle").querySelector("span").textContent = "Nueva Copia";
+            document.getElementById("libroId").value = "";
+            document.getElementById("notas").value = "";
+            document.getElementById("disponible").value = "true";
+            document.getElementById("modalCopia").classList.remove("hidden");
+        }
+
+        async function prepararEdicion(id) {
+            try {
+                const res = await apiFetch(`http://127.0.0.1:8000/copias/${id}`);
+                if (!res.ok) throw new Error("No se pudo obtener la copia");
+
+                const copia = await res.json();
+
+                editandoId = id;
+                document.getElementById("libroId").value = copia.Libro;
+                document.getElementById("notas").value = copia.Notas || "";
+                document.getElementById("disponible").value = copia.Disponible ? "true" : "false";
+                document.getElementById("modalTitle").querySelector("span").textContent = "Editar Copia";
+                document.getElementById("modalCopia").classList.remove("hidden");
+            } catch (err) {
+                alert("Error al cargar datos de la copia");
+            }
+        }
+
+        async function guardarCopia() {
+            const data = {
+                Libro: parseInt(document.getElementById("libroId").value),
+                Notas: document.getElementById("notas").value.trim() || null,
+                Disponible: document.getElementById("disponible").value === "true"
+            };
+
+            if (isNaN(data.Libro) || data.Libro <= 0) {
+                alert("El ID del libro es obligatorio y debe ser un número positivo");
+                return;
+            }
+
+            const url = editandoId
+                ? `http://127.0.0.1:8000/copias/${editandoId}`
+                : "http://127.0.0.1:8000/copias/";
+            const method = editandoId ? "PUT" : "POST";
+
+            try {
+                const res = await apiFetch(url, {
+                    method: method,
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    alert(editandoId ? "✅ Copia actualizada" : "✅ Copia creada");
+                    cerrarModal();
+                    cargarCopias();
+                } else {
+                    let errorMsg = "No se pudo guardar la copia.";
+                    try {
+                        const error = await res.json();
+                        if (error.detail) {
+                            if (typeof error.detail === "string") errorMsg = error.detail;
+                            else if (Array.isArray(error.detail) && error.detail.length > 0) {
+                                errorMsg = error.detail[0].msg || "Error de validación";
+                            }
+                        } else {
+                            errorMsg = JSON.stringify(error);
+                        }
+                    } catch (e) {
+                        errorMsg = await res.text();
+                    }
+                    alert("❌ Error: " + errorMsg);
+                }
+            } catch (err) {
+                alert("❌ Error de conexión con el servidor");
+            }
+        }
+
+        async function eliminarCopia(id) {
+            if (!confirm("¿Estás seguro de eliminar esta copia?")) return;
+
+            try {
+                const res = await apiFetch(`http://127.0.0.1:8000/copias/${id}`, { method: "DELETE" });
+                if (res.ok) {
+                    cargarCopias();
+                } else {
+                    let errorMsg = "No se pudo eliminar la copia.";
+                    try {
+                        const error = await res.json();
+                        if (error.detail) {
+                            if (typeof error.detail === "string") {
+                                errorMsg = error.detail;
+                                // Detectar mensaje de restricción de integridad (SQL Server)
+                                if (errorMsg.toLowerCase().includes("foreign key") ||
+                                    errorMsg.toLowerCase().includes("referenced") ||
+                                    errorMsg.toLowerCase().includes("constraint") ||
+                                    errorMsg.toLowerCase().includes("related")) {
+                                    errorMsg = "❌ No se puede eliminar esta copia porque está asociada a un préstamo activo. Primero debe devolver el préstamo correspondiente.";
+                                }
+                            } else if (Array.isArray(error.detail) && error.detail.length > 0) {
+                                errorMsg = error.detail[0].msg || "Error de validación";
+                            }
+                        } else {
+                            errorMsg = JSON.stringify(error);
+                        }
+                    } catch (e) {
+                        // Si no es JSON, usar el texto plano
+                        const text = await res.text();
+                        if (text.toLowerCase().includes("foreign key") ||
+                            text.toLowerCase().includes("referenced") ||
+                            text.toLowerCase().includes("constraint")) {
+                            errorMsg = "❌ No se puede eliminar esta copia porque está asociada a un préstamo activo. Primero debe devolver el préstamo correspondiente.";
+                        } else {
+                            errorMsg = text || errorMsg;
+                        }
+                    }
+                    alert(errorMsg);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("❌ Error de conexión con el servidor.");
+            }
+        }
+
+        function cerrarModal() {
+            document.getElementById("modalCopia").classList.add("hidden");
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        cargarCopias();
+    </script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Préstamos | Biblioteca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <script src="js/protect.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f3e8;
+            background-image: radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.08) 2%, transparent 2.5%);
+            background-size: 24px 24px;
+        }
+        .card {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.1);
+            border-color: rgba(180, 130, 70, 0.3);
+        }
+        .btn-primary {
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        input:focus {
+            outline: none;
+            ring: 2px solid #d97706;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header con navegación -->
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <a href="dashboard.html" class="text-amber-700 hover:text-amber-900 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-amber-800">📖 Gestión de Préstamos</h1>
+                    <p class="text-gray-500 mt-1">Listado completo de préstamos y devoluciones</p>
+                </div>
+            </div>
+
+            <!-- Botón Nuevo Préstamo (visible para todos los autenticados) -->
+            <button onclick="mostrarModalPrestar()" 
+                    class="btn-primary bg-green-700 hover:bg-green-800 text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Nuevo Préstamo
+            </button>
+        </div>
+
+        <!-- Resumen de total -->
+        <div class="bg-white rounded-xl shadow-sm border border-amber-100 p-4 mb-8 flex items-center gap-3">
+            <div class="bg-amber-100 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            </div>
+            <div>
+                <span class="text-sm text-gray-500">Total registros</span>
+                <span id="totalPrestamos" class="text-2xl font-bold text-amber-700 block">0</span>
+            </div>
+        </div>
+
+        <!-- Grid de préstamos -->
+        <div id="prestamosContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    </div>
+
+    <!-- MODAL NUEVO PRÉSTAMO -->
+    <div id="modalPrestar" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-amber-100">
+            <h2 class="text-2xl font-bold text-gray-800 mb-5 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Nuevo Préstamo
+            </h2>
+
+            <!-- Aviso especial para niños -->
+            <div id="avisoNinos" class="hidden bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-xl mb-5 text-sm">
+                ⚠️ Recuerda: Solo puedes prestar <strong>libros infantiles</strong>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Código de Usuario</label>
+                    <input id="codigoUsuario" type="number" placeholder="Ej: 101" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ID de la Copia</label>
+                    <input id="copiaId" type="number" placeholder="Ej: 12" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de entrega esperada</label>
+                    <input id="fechaEntrega" type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition">
+                    <p class="text-xs text-gray-400 mt-1">Debe ser igual o posterior a hoy</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="crearPrestamo()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-medium transition">Confirmar Préstamo</button>
+                <button onclick="cerrarModalPrestar()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg font-medium transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        checkAuth();
+        const role = localStorage.getItem("role");
+        let usuariosMap = null; // Almacenará el mapa código -> ID
+
+        if (role === "Niños") {
+            document.getElementById("avisoNinos").classList.remove("hidden");
+        }
+
+        // Cargar el mapa de usuarios (código -> ID) para validar y convertir
+        async function cargarUsuariosMap() {
+            try {
+                const res = await apiFetch("http://127.0.0.1:8000/usuarios/");
+                if (res.ok) {
+                    const usuarios = await res.json();
+                    usuariosMap = new Map();
+                    usuarios.forEach(u => {
+                        usuariosMap.set(u.Cod_usuario, u.Id);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar usuarios:", error);
+            }
+        }
+
+        async function cargarPrestamos() {
+            try {
+                const res = await apiFetch("http://127.0.0.1:8000/prestamos/");
+                if (!res.ok) throw new Error("Error al obtener datos");
+
+                const prestamos = await res.json();
+                const container = document.getElementById("prestamosContainer");
+                document.getElementById("totalPrestamos").textContent = prestamos.length;
+
+                if (prestamos.length === 0) {
+                    container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">No hay préstamos registrados</div>`;
+                    return;
+                }
+
+                container.innerHTML = prestamos.map(p => {
+                    // Obtener nombre y código del usuario
+                    let nombreUsuario = "Usuario Desconocido";
+                    let codigoUsuario = "???";
+                    if (p.usuario_rel) {
+                        if (p.usuario_rel.persona_rel && p.usuario_rel.persona_rel.Nombre) {
+                            nombreUsuario = p.usuario_rel.persona_rel.Nombre;
+                        } else if (p.usuario_rel.Correo) {
+                            nombreUsuario = p.usuario_rel.Correo;
+                        }
+                        codigoUsuario = p.usuario_rel.Cod_usuario ?? p.Usuario;
+                    } else {
+                        codigoUsuario = p.Usuario;
+                    }
+
+                    const fecha = new Date(p.Fecha_prestamo).toLocaleDateString('es-ES');
+                    const numLibros = p.detalles ? p.detalles.length : 0;
+
+                    return `
+                    <div class="card bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all border-l-4 border-amber-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-bold">
+                                Préstamo #${p.Id}
+                            </div>
+                            <span class="text-gray-400 text-xs">${fecha}</span>
+                        </div>
+
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center text-xl font-bold text-amber-700 uppercase">
+                                ${nombreUsuario.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">${escapeHtml(nombreUsuario)}</h3>
+                                <p class="text-sm text-gray-500">Código Usuario: ${codigoUsuario}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+                            <span class="text-sm font-medium text-gray-600">
+                                <span class="font-bold">${numLibros}</span> libro(s)
+                            </span>
+                            <button onclick="devolverPrestamo(${p.Id})" 
+                                    class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 px-5 py-2 rounded-xl text-sm font-medium transition-all">
+                                Devolver Todo
+                            </button>
+                        </div>
+                    </div>`;
+                }).join("");
+            } catch (error) {
+                console.error("Error al cargar préstamos:", error);
+                document.getElementById("prestamosContainer").innerHTML = `<div class="col-span-full text-center py-12 text-red-500">Error al cargar los préstamos</div>`;
+            }
+        }
+
+        function mostrarModalPrestar() {
+            document.getElementById("modalPrestar").classList.remove("hidden");
+            document.getElementById("codigoUsuario").value = "";
+            document.getElementById("copiaId").value = "";
+            document.getElementById("fechaEntrega").value = "";
+        }
+
+        function cerrarModalPrestar() {
+            document.getElementById("modalPrestar").classList.add("hidden");
+        }
+
+        // Función para validar que la fecha no sea anterior al día actual
+        function validarFechaEntrega(fechaStr) {
+            if (!fechaStr) return false;
+            const fecha = new Date(fechaStr);
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            return fecha >= hoy;
+        }
+
+        async function crearPrestamo() {
+            const codigoUsuario = parseInt(document.getElementById("codigoUsuario").value);
+            const copiaId = parseInt(document.getElementById("copiaId").value);
+            const fechaEntrega = document.getElementById("fechaEntrega").value;
+
+            // Validaciones de campos
+            if (isNaN(codigoUsuario) || isNaN(copiaId) || !fechaEntrega) {
+                alert("❌ Por favor completa todos los campos (código de usuario, ID de copia y fecha).");
+                return;
+            }
+
+            if (codigoUsuario <= 0 || copiaId <= 0) {
+                alert("❌ El código de usuario y el ID de copia deben ser números positivos.");
+                return;
+            }
+
+            if (!validarFechaEntrega(fechaEntrega)) {
+                alert("❌ La fecha de entrega no puede ser anterior al día de hoy. Selecciona una fecha igual o posterior.");
+                return;
+            }
+
+            // Validar que el código de usuario exista
+            if (!usuariosMap) {
+                await cargarUsuariosMap();
+            }
+            const usuarioId = usuariosMap.get(codigoUsuario);
+            if (!usuarioId) {
+                alert("❌ El código de usuario ingresado no existe en el sistema.");
+                return;
+            }
+
+            const data = {
+                Usuario: usuarioId,
+                detalles: [{
+                    Copia: copiaId,
+                    Fecha_entrega_esperada: fechaEntrega
+                }]
+            };
+
+            try {
+                const res = await apiFetch("http://127.0.0.1:8000/prestamos/", {
+                    method: "POST",
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    alert("✅ Préstamo creado correctamente");
+                    cerrarModalPrestar();
+                    cargarPrestamos();
+                } else {
+                    // Intentar extraer el mensaje de error de forma robusta
+                    let errorMsg = "No se pudo crear el préstamo.";
+                    try {
+                        const errorData = await res.json();
+                        if (errorData.detail) {
+                            if (typeof errorData.detail === "string") {
+                                errorMsg = errorData.detail;
+                            } else if (Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+                                errorMsg = errorData.detail[0].msg || errorData.detail[0];
+                            }
+                        } else {
+                            errorMsg = JSON.stringify(errorData);
+                        }
+                    } catch (e) {
+                        // Si no es JSON, obtener texto plano
+                        errorMsg = await res.text();
+                    }
+                    alert(`❌ Error: ${errorMsg}`);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("❌ Error de conexión con el servidor. Verifique que el backend esté corriendo.");
+            }
+        }
+
+        async function devolverPrestamo(id) {
+            if (!confirm("¿Confirmas la devolución de todos los libros de este préstamo?")) return;
+
+            try {
+                const res = await apiFetch(`http://127.0.0.1:8000/prestamos/${id}`, { method: "DELETE" });
+                if (res.ok) {
+                    alert("✅ Devolución exitosa");
+                    cargarPrestamos();
+                } else {
+                    let errorMsg = "Hubo un error al procesar la devolución.";
+                    try {
+                        const errorData = await res.json();
+                        errorMsg = errorData.detail || errorMsg;
+                    } catch (e) {
+                        errorMsg = await res.text();
+                    }
+                    alert(`❌ ${errorMsg}`);
+                }
+            } catch (error) {
+                alert("❌ Error de conexión al intentar devolver el préstamo.");
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Cargar mapa de usuarios y luego préstamos
+        (async () => {
+            await cargarUsuariosMap();
+            await cargarPrestamos();
+        })();
+    </script>
+</body>
+</html>
