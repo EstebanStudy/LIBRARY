@@ -168,8 +168,6 @@ Distribuido bajo la licencia MIT. Consulta el archivo LICENSE para más informac
 Esteban Quintero Yepes – GitHub
 
 🙏 Agradecimientos
-A la docente Beatriz Eugenia Guerra Areiza por la guía en el proceso de pruebas y calidad.
-
-Al Instituto Tecnológico Metropolitano (ITM) por el espacio de aprendizaje.
+A mis compañeros 
 
 ¡Feliz lectura y préstamos! 📖✨
