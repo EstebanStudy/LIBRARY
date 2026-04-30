@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <script src="js/protect.js"></script>
+    <script src="js/app.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -50,13 +51,34 @@
                 </a>
                 <h1 class="text-3xl md:text-4xl font-bold text-amber-800">📚 Catálogo de Libros</h1>
             </div>
-            <div id="adminActions" class="hidden">
-                <button id="btnNuevoLibro" class="btn-primary bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            <div class="flex flex-wrap gap-3 items-center">
+                <!-- Buscador -->
+                <div class="relative">
+                    <input type="text" id="busqueda" placeholder="Buscar por título, autor o ISBN..." 
+                           class="pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent w-64"
+                           onkeyup="if(event.key === 'Enter') buscarLibros()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    Nuevo Libro
+                    <button onclick="buscarLibros()" class="absolute right-2 top-2 text-amber-600 hover:text-amber-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </button>
+                </div>
+                <button onclick="cargarLibros()" class="text-gray-500 hover:text-amber-700 px-3 py-2" title="Limpiar búsqueda">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
+                <div id="adminActions" class="hidden">
+                    <button id="btnNuevoLibro" class="btn-primary bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Nuevo Libro
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -146,31 +168,58 @@
             const res = await apiFetch("http://127.0.0.1:8000/libros/");
             if (res.ok) {
                 const libros = await res.json();
-                const container = document.getElementById("librosContainer");
-                const role = localStorage.getItem("role");
-
-                container.innerHTML = libros.map(l => `
-                    <div class="card bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
-                        <div class="flex justify-between items-start mb-3">
-                            <span class="text-xs font-mono bg-amber-100 text-amber-800 px-2 py-1 rounded">Cod: ${l.Cod_libro}</span>
-                            <span class="text-xs ${l.Es_Infantil ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'} px-2 py-1 rounded-full font-medium">
-                                ${l.Es_Infantil ? '👶 Infantil' : '📖 General'}
-                            </span>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(l.Nombre_libro)}</h3>
-                        <p class="text-gray-600 text-sm mb-4 italic">✍️ ${escapeHtml(l.Autor || "Autor desconocido")}</p>
-                        ${l.Fecha_publicacion ? `<p class="text-gray-500 text-xs mb-4">📅 ${l.Fecha_publicacion}</p>` : ''}
-                        ${role === "Administrador" ? `
-                            <div class="flex gap-2 mt-4 pt-3 border-t border-gray-100">
-                                <button onclick="prepararEdicionLibro(${l.Id})" class="flex-1 bg-amber-50 text-amber-600 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 hover:text-white transition">Editar</button>
-                                <button onclick="eliminarLibro(${l.Id})" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-600 hover:text-white transition">Eliminar</button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `).join("");
+                renderizarLibros(libros);
             } else {
                 console.error("Error al cargar libros");
             }
+        }
+
+        // Buscar libros por título, autor o ISBN
+        async function buscarLibros() {
+            const query = document.getElementById("busqueda").value.trim();
+            const url = query 
+                ? `http://127.0.0.1:8000/libros/?q=${encodeURIComponent(query)}`
+                : "http://127.0.0.1:8000/libros/";
+            
+            const res = await apiFetch(url);
+            if (res.ok) {
+                const libros = await res.json();
+                renderizarLibros(libros);
+            } else {
+                console.error("Error al buscar libros");
+            }
+        }
+
+        // Renderizar libros en el DOM
+        function renderizarLibros(libros) {
+            const container = document.getElementById("librosContainer");
+            const role = localStorage.getItem("role");
+
+            if (libros.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">No se encontraron libros</div>`;
+                return;
+            }
+
+            container.innerHTML = libros.map(l => `
+                <div class="card bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs font-mono bg-amber-100 text-amber-800 px-2 py-1 rounded">Cod: ${l.Cod_libro}</span>
+                        <span class="text-xs ${l.Es_Infantil ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'} px-2 py-1 rounded-full font-medium">
+                            ${l.Es_Infantil ? '👶 Infantil' : '📖 General'}
+                        </span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(l.Nombre_libro)}</h3>
+                    <p class="text-gray-600 text-sm mb-4 italic">✍️ ${escapeHtml(l.Autor || "Autor desconocido")}</p>
+                    ${l.ISBN ? `<p class="text-gray-500 text-xs mb-4">📚 ISBN: ${escapeHtml(l.ISBN)}</p>` : ''}
+                    ${l.Fecha_publicacion ? `<p class="text-gray-500 text-xs mb-4">📅 ${l.Fecha_publicacion}</p>` : ''}
+                    ${role === "Administrador" ? `
+                        <div class="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                            <button onclick="prepararEdicionLibro(${l.Id})" class="flex-1 bg-amber-50 text-amber-600 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 hover:text-white transition">Editar</button>
+                            <button onclick="eliminarLibro(${l.Id})" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-600 hover:text-white transition">Eliminar</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join("");
         }
 
         // Mostrar modal para crear nuevo libro

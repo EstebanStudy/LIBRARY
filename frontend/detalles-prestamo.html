@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <script src="js/protect.js"></script>
+    <script src="js/app.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -202,20 +203,30 @@
                 if (res.ok) {
                     cerrarModal();
                     cargarDetalles();
+                    if (method === "POST") {
+                        alert("¡Registro exitoso! El nuevo elemento se ha guardado correctamente.");
+                    } else {
+                        alert("Cambios guardados. La información se actualizó con éxito.");
+                    }
                 } else {
                     const err = await res.json();
-                    alert("Error: " + JSON.stringify(err.detail || "No se pudo guardar"));
+                    alert("No se pudo guardar la información. Por favor, verifica que todos los campos obligatorios estén completos.");
                 }
             } catch (error) {
-                alert("Error de conexión con el servidor");
+                alert("Algo salió mal al conectar con el servidor. Por favor, inténtalo de nuevo.");
             }
         }
 
         async function eliminarDetalle(id) {
-            if (!confirm("¿Deseas eliminar este registro de detalle?")) return;
+            if (!confirm("¿Estás seguro de que deseas eliminar este registro? Esta acción evitará que queden espacios vacíos en la base de datos y no se puede deshacer.")) return;
             const res = await apiFetch(`http://127.0.0.1:8000/detalles-prestamo/${id}`, { method: "DELETE" });
-            if (res.ok) cargarDetalles();
-            else alert("No se pudo eliminar el detalle");
+            if (res.ok) {
+                cargarDetalles();
+                alert("Registro eliminado correctamente. Se ha optimizado el espacio en la lista.");
+            } else {
+                const err = await res.json();
+                alert(err.detail || "No se pudo eliminar el detalle. Por favor, revisa que el registro esté devuelto antes de borrar.");
+            }
         }
 
         function cerrarModal() {
