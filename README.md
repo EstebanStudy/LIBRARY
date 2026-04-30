@@ -50,6 +50,7 @@ LIBRARY/
 │ └── schemas/ # Modelos Pydantic (validación)
 ├── frontend/ # Archivos estáticos HTML/CSS/JS
 │ ├── js/
+│ │ ├── app.js # Utilidades globales y mensajes
 │ │ ├── auth.js # Lógica de login
 │ │ └── protect.js # Autenticación de rutas frontend
 │ ├── dashboard.html
@@ -64,9 +65,23 @@ LIBRARY/
 ├── tests/ # Pruebas automatizadas (pytest)
 ├── main.py # Punto de entrada de la aplicación
 ├── requirements.txt # Dependencias del backend
+├── migrate_to_script_inicial.sql # Script de migración con esquema y datos de prueba
 ├── .env # Variables de entorno (no incluido en repo)
 └── README.md # Este archivo
 
+## 🗄️ Esquema de Base de Datos
+
+El esquema incluye las siguientes tablas principales:
+
+- **Roles**: Gestión de roles (Administrador, Usuario, Niños).
+- **Personas**: Información de personas con campos como Nombre, Correo, Teléfono, Dirección.
+- **Usuarios**: Autenticación con hash de contraseña y sal UUID.
+- **Libros**: Catálogo con Código, Título, Autor, Género, Es_Infantil.
+- **Copias**: Instancias físicas de libros.
+- **Préstamos**: Registros de préstamos con fecha de entrega.
+- **Detalles_Préstamo**: Asociación de copias a préstamos con estado de devolución.
+
+Para inicializar la base de datos, ejecuta el script `migrate_to_script_inicial.sql` que incluye el esquema completo y datos de prueba para desarrollo.
 
 ## 🔧 Instalación y configuración
 
@@ -98,7 +113,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 ⚠️ Ajusta la cadena de conexión según tu motor de base de datos. El proyecto usa SQL Server, pero puedes adaptarlo a PostgreSQL, MySQL, etc. cambiando el driver.
 
 5. Crear las tablas
-Ejecuta el script SQL proporcionado en database/init.sql (o ejecuta las migraciones desde la aplicación). También puedes iniciar la aplicación y dejar que SQLAlchemy cree las tablas (si Base.metadata.create_all está activo).
+
+Ejecuta el script SQL `migrate_to_script_inicial.sql` en tu base de datos para crear las tablas y poblar con datos de prueba. Alternativamente, puedes dejar que SQLAlchemy cree las tablas automáticamente al iniciar la aplicación (si `Base.metadata.create_all` está activo en `main.py`).
 
 ▶️ Ejecutar la aplicación
 
@@ -149,14 +165,19 @@ Las pruebas cubren los casos descritos en el informe de calidad (TC-01 a TC-20) 
 
 📝 Mejoras implementadas (última versión)
 
-Validación de teléfono (al menos 7 dígitos) en el frontend de personas.
-Validación de fecha de entrega (no anterior a hoy) en préstamos.
-Manejo de errores con mensajes claros desde el backend.
-Panel de usuario/niño con visualización de sus propios préstamos y botón de devolución.
-Mejora visual del dashboard con colores suaves y diseño responsive.
-Corrección de errores de autenticación en endpoints protegidos.
-Importación de HTTPException en routers faltantes.
-Filtro infantil implementado correctamente en el endpoint de libros.
+- **Compatibilidad con SQL Server**: Se agregó `{"implicit_returning": False}` a todos los modelos para evitar conflictos con triggers en INSERT/UPDATE.
+- **Nuevos campos en modelos**:
+  - `Direccion` agregado a la tabla `Persona` para almacenar direcciones.
+  - `Es_Infantil` agregado a la tabla `Libro` para marcar libros infantiles.
+- **Restricciones de integridad en CRUD**:
+  - Prevención de eliminación de préstamos activos (con detalles no devueltos).
+  - Prevención de eliminación de detalles de préstamo no devueltos.
+- **Mejoras en el frontend**:
+  - Estándarización de mensajes con helpers globales en `js/app.js` (`mostrarAlerta` y sobrescritura de `alert()` para estilos consistentes).
+  - Inclusión de `js/app.js` en todos los archivos HTML para utilidades globales.
+  - Agregado de botones de eliminación para préstamos completados en `prestamos.html`.
+- **Script de migración**: `migrate_to_script_inicial.sql` incluye esquema completo y datos de prueba para desarrollo.
+- **Mensajes profesionales**: Todos los mensajes de error y confirmación estandarizados para una mejor UX.
 
 🤝 Contribuciones
 Este proyecto fue desarrollado con fines académicos. Si deseas contribuir, por favor abre un issue o un pull request.
