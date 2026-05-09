@@ -11,7 +11,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: #fef9f0;
+            background: #e2d0c1;
             background-image: radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.05) 2%, transparent 2.5%);
             background-size: 24px 24px;
         }
@@ -173,8 +173,25 @@
             return userId;
         }
 
-        let roleDisplay = role === "Administrador" ? "Administrador" : (role === "Usuario" ? "Lector" : "Pequeño Lector");
-        welcomeEl.innerHTML = `Hola, ${roleDisplay || "Usuario"} 👋 <span class="text-amber-600">| Disfruta tu visita</span>`;
+        async function cargarUsuarioBienvenida() {
+            let nombreUsuario = null;
+            try {
+                const res = await apiFetch("http://127.0.0.1:8000/auth/me");
+                if (res && res.ok) {
+                    const userData = await res.json();
+                    nombreUsuario = userData?.persona_rel?.Nombre || userData?.Correo;
+                    if (!localStorage.getItem("userId") && userData?.Id) {
+                        localStorage.setItem("userId", userData.Id);
+                    }
+                }
+            } catch (e) {
+                console.error("No se pudo obtener datos del usuario:", e);
+            }
+            const roleDisplay = role === "Administrador" ? "Administrador" : (role === "Usuario" ? "Lector" : "Pequeño Lector");
+            welcomeEl.innerHTML = `Hola, ${nombreUsuario || roleDisplay || "Usuario"} 👋 <span class="text-amber-600">| Disfruta tu visita</span>`;
+        }
+
+        cargarUsuarioBienvenida();
 
         if (role === "Administrador") {
             document.getElementById("adminPanel").classList.remove("hidden");
@@ -224,10 +241,14 @@
                                         <p class="text-xs text-gray-500">ID Préstamo: ${p.Id}</p>
                                     </div>
                                 </div>
+                                ${role === "Administrador" ? `
                                 <button onclick="devolverPrestamoUsuario(${p.Id}, '${containerId}')" 
                                         class="w-full bg-red-50 hover:bg-red-600 hover:text-white text-red-600 py-2 rounded-lg text-sm font-medium transition">
                                     Devolver todo
                                 </button>
+                                ` : `
+                                <div class="text-sm text-gray-500 py-2">Solo un administrador puede devolver préstamos.</div>
+                                `}
                             </div>
                         `;
                     }).join("");

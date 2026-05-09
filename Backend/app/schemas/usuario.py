@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
-from app.schemas.persona import PersonaResponse
+from app.schemas.persona import PersonaResponse, PersonaUpdate
 
 class UsuarioBase(BaseModel):
     Cod_usuario: int = Field(..., gt=0)
@@ -24,7 +24,15 @@ class UsuarioResponse(BaseModel):
     Correo: str
     Persona: int
     Rol: int
-    persona_rel: Optional[PersonaResponse] = None   # <-- agregar esta línea
+    persona_rel: Optional[PersonaResponse] = None
+
+    class ConfigDict:
+        from_attributes = True
+
+class UsuarioProfileUpdate(BaseModel):
+    Correo: Optional[EmailStr] = None
+    Contraseña: Optional[str] = Field(None, min_length=8, max_length=255)
+    Persona: Optional[PersonaUpdate] = None
 
     class ConfigDict:
         from_attributes = True

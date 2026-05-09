@@ -66,20 +66,19 @@ def delete_libro(db: Session, libro_id: int) -> dict:
     return {"message": "Libro eliminado correctamente"}
 
 def buscar_libros(db: Session, query: str = None, skip: int = 0, limit: int = 100):
-    """Busca libros por título, autor o ISBN."""
+    """Busca libros por título o autor."""
     from sqlalchemy import or_
     
     q = db.query(Libro)
     
     if query:
-        # Buscar en título, autor o ISBN (ignorando mayúsculas/minúsculas)
+        # Buscar en título o autor (ignorando mayúsculas/minúsculas)
         search = f"%{query}%"
         q = q.filter(
             or_(
-                Libro.Titulo.ilike(search),
-               Libro.Autor.ilike(search),
-                Libro.ISBN.ilike(search)
+                Libro.Nombre_libro.ilike(search),
+                Libro.Autor.ilike(search)
             )
         )
     
-    return q.order_by(Libro.Titulo).offset(skip).limit(limit).all()
+    return q.order_by(Libro.Nombre_libro).offset(skip).limit(limit).all()

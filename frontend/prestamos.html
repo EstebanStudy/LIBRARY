@@ -11,7 +11,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: #f7f3e8;
+            background: #e2d0c1;
             background-image: radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.08) 2%, transparent 2.5%);
             background-size: 24px 24px;
         }
@@ -50,14 +50,14 @@
                     </svg>
                 </a>
                 <div>
-                    <h1 class="text-3xl md:text-4xl font-bold text-amber-800">📖 Gestión de Préstamos</h1>
-                    <p class="text-gray-500 mt-1">Listado completo de préstamos y devoluciones</p>
+                    <h1 id="pageTitle" class="text-3xl md:text-4xl font-bold text-amber-800">📖 Gestión de Préstamos</h1>
+                    <p id="pageSubtitle" class="text-gray-500 mt-1">Listado completo de préstamos y devoluciones</p>
                 </div>
             </div>
 
-            <!-- Botón Nuevo Préstamo (visible para todos los autenticados) -->
-            <button onclick="mostrarModalPrestar()" 
-                    class="btn-primary bg-green-700 hover:bg-green-800 text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 shadow-sm">
+            <!-- Botón Nuevo Préstamo (visible solo para administradores) -->
+            <button id="btnNuevoPrestamo" onclick="mostrarModalPrestar()" 
+                    class="hidden btn-primary bg-green-700 hover:bg-green-800 text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -124,9 +124,46 @@
         checkAuth();
         const role = localStorage.getItem("role");
         let usuariosMap = null; // Almacenará el mapa código -> ID
+        let currentUserId = null; // ID del usuario actual
+
+        const pageTitle = document.getElementById("pageTitle");
+        const pageSubtitle = document.getElementById("pageSubtitle");
+        const btnNuevoPrestamo = document.getElementById("btnNuevoPrestamo");
+        const modalPrestar = document.getElementById("modalPrestar");
+
+        if (pageTitle) {
+            pageTitle.textContent = role === "Administrador" ? "📖 Gestión de Préstamos" : "📚 Mis Préstamos";
+        }
+        if (pageSubtitle) {
+            pageSubtitle.textContent = role === "Administrador" ? "Listado completo de préstamos y devoluciones" : "Tus libros prestados actualmente";
+        }
+        if (btnNuevoPrestamo && role !== "Administrador") {
+            btnNuevoPrestamo.classList.add("hidden");
+        }
+        if (modalPrestar && role !== "Administrador") {
+            modalPrestar.classList.add("hidden");
+        }
 
         if (role === "Niños") {
             document.getElementById("avisoNinos").classList.remove("hidden");
+        }
+
+        // Obtener userId del usuario actual
+        async function ensureUserId() {
+            let userId = localStorage.getItem("userId");
+            if (!userId) {
+                try {
+                    const res = await apiFetch("http://127.0.0.1:8000/auth/me");
+                    if (res.ok) {
+                        const userData = await res.json();
+                        localStorage.setItem("userId", userData.Id);
+                        return userData.Id;
+                    }
+                } catch (e) {
+                    console.error("No se pudo obtener ID de usuario", e);
+                }
+            }
+            return userId;
         }
 
         // Cargar el mapa de usuarios (código -> ID) para validar y convertir
@@ -147,7 +184,21 @@
 
         async function cargarPrestamos() {
             try {
-                const res = await apiFetch("http://127.0.0.1:8000/prestamos/");
+                let res;
+                
+                // Si no es administrador, cargar solo sus préstamos
+                if (role !== "Administrador") {
+                    currentUserId = await ensureUserId();
+                    if (!currentUserId) {
+                        document.getElementById("prestamosContainer").innerHTML = 
+                            `<div class="col-span-full text-center py-12 text-gray-500">No se pudo identificar tu usuario. Contacta al administrador.</div>`;
+                        return;
+                    }
+                    res = await apiFetch(`http://127.0.0.1:8000/prestamos/usuario/${currentUserId}`);
+                } else {
+                    // Administrador ve todos los préstamos
+                    res = await apiFetch("http://127.0.0.1:8000/prestamos/");
+                }
                 if (!res.ok) throw new Error("Error al obtener datos");
 
                 const prestamos = await res.json();
@@ -155,7 +206,9 @@
                 document.getElementById("totalPrestamos").textContent = prestamos.length;
 
                 if (prestamos.length === 0) {
-                    container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">No hay préstamos registrados</div>`;
+                    container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">
+                        ${role === "Administrador" ? "No hay préstamos registrados" : "No tienes préstamos activos"}
+                    </div>`;
                     return;
                 }
 
@@ -191,12 +244,14 @@
                                     <span class="font-medium text-gray-700">Copia #${d.Copia}</span>
                                     <span class="text-xs text-gray-500 block">Esperada: ${fechaEsperada} | Devuelta: ${fechaReal}</span>
                                 </div>
-                                ${!estaDevuelto ? 
+                                ${!estaDevuelto && role === "Administrador" ? 
                                     `<button onclick="devolverCopia(${p.Id}, ${d.Copia})" 
                                         class="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded-lg transition">
                                         Devolver
                                     </button>` : 
-                                    `<span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-lg">✓ Devuelto</span>`
+                                    estaDevuelto ? 
+                                    `<span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-lg">✓ Devuelto</span>` :
+                                    `<span class="text-xs bg-yellow-100 text-yellow-700 px-3 py-1 rounded-lg">Pendiente</span>`
                                 }
                             </div>`;
                         }).join('');
@@ -231,7 +286,8 @@
                             <span class="text-sm font-medium text-gray-600">
                                 <span class="font-bold">${numLibros}</span> libro(s)
                             </span>
-                            ${p.detalles && p.detalles.some(d => d.Fecha_devolucion_real === null) ?
+                            ${role === "Administrador" ? (
+                                p.detalles && p.detalles.some(d => d.Fecha_devolucion_real === null) ?
                                 `<button onclick="devolverPrestamo(${p.Id})" 
                                     class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 px-5 py-2 rounded-xl text-sm font-medium transition-all">
                                     Devolver Todo
@@ -243,6 +299,13 @@
                                         Eliminar préstamo
                                     </button>
                                 </div>`
+                            ) : 
+                                `<span class="text-sm text-gray-500">
+                                    ${p.detalles && p.detalles.every(d => d.Fecha_devolucion_real !== null) ? 
+                                        'Todos devueltos ✓' : 
+                                        'Pendiente de devolución'
+                                    }
+                                </span>`
                             }
                         </div>
                     </div>`;
@@ -254,6 +317,10 @@
         }
 
         function mostrarModalPrestar() {
+            if (role !== "Administrador") {
+                alert("No tienes permisos para crear préstamos.");
+                return;
+            }
             document.getElementById("modalPrestar").classList.remove("hidden");
             document.getElementById("codigoUsuario").value = "";
             document.getElementById("copiaId").value = "";
@@ -274,6 +341,11 @@
         }
 
         async function crearPrestamo() {
+            if (role !== "Administrador") {
+                alert("No tienes permisos para crear préstamos.");
+                return;
+            }
+            
             const codigoUsuario = parseInt(document.getElementById("codigoUsuario").value);
             const copiaId = parseInt(document.getElementById("copiaId").value);
             const fechaEntrega = document.getElementById("fechaEntrega").value;
@@ -347,6 +419,11 @@
         }
 
         async function devolverPrestamo(id) {
+            if (role !== "Administrador") {
+                alert("No tienes permisos para devolver préstamos.");
+                return;
+            }
+            
             if (!confirm("¿Confirmas la devolución de todos los libros de este préstamo?")) return;
 
             try {
@@ -372,6 +449,11 @@
         }
 
         async function eliminarPrestamo(id) {
+            if (role !== "Administrador") {
+                alert("No tienes permisos para eliminar préstamos.");
+                return;
+            }
+            
             if (!confirm("¿Estás seguro de que deseas eliminar este registro? Esta acción evitará que queden espacios vacíos en la base de datos y no se puede deshacer.")) return;
 
             try {
@@ -396,6 +478,11 @@
 
         // Función para devolver una copia específica
         async function devolverCopia(prestamoId, copiaId) {
+            if (role !== "Administrador") {
+                alert("No tienes permisos para devolver copias.");
+                return;
+            }
+            
             if (!confirm(`¿Confirmas la devolución de la copia #${copiaId}?`)) return;
 
             try {
@@ -430,9 +517,11 @@
             });
         }
 
-        // Cargar mapa de usuarios y luego préstamos
+        // Cargar mapa de usuarios (solo para administradores) y luego préstamos
         (async () => {
-            await cargarUsuariosMap();
+            if (role === "Administrador") {
+                await cargarUsuariosMap();
+            }
             await cargarPrestamos();
         })();
     </script>

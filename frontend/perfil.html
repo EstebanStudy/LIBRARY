@@ -11,7 +11,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: #f7f3e8;
+            background: #e2d0c1;
             background-image: radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.08) 2%, transparent 2.5%);
             background-size: 24px 24px;
         }
@@ -76,13 +76,14 @@
         function renderizarPerfil(usuario) {
             const container = document.getElementById("perfilContainer");
             const role = localStorage.getItem("role");
+            const canEdit = role !== "Niños";
+            const puedeCambiarContrasena = canEdit;
 
             // Obtener datos de la persona relacionada
             let nombre = "Sin asignar";
             let documento = "";
             let telefono = "";
             let direccion = "";
-            const puedeCambiarContrasena = role === "Administrador";
 
             if (usuario.persona_rel) {
                 nombre = usuario.persona_rel.Nombre || nombre;
@@ -94,7 +95,7 @@
             const iniciales = nombre.charAt(0).toUpperCase();
 
             container.innerHTML = `
-                <!-- Avatar y基本信息 -->
+                <!-- Avatar y datos principales -->
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-amber-100">
                     <div class="flex items-center gap-6">
                         <div class="h-20 w-20 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg">
@@ -125,7 +126,11 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Correo Electrónico</label>
-                            <div class="text-gray-800">${escapeHtml(usuario.Correo)}</div>
+                            ${canEdit ? `
+                                <input id="correoInput" type="email" value="${escapeHtml(usuario.Correo)}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                            ` : `
+                                <div class="text-gray-800">${escapeHtml(usuario.Correo)}</div>
+                            `}
                         </div>
                     </div>
                 </div>
@@ -141,7 +146,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Nombre Completo</label>
-                            <div class="text-gray-800">${escapeHtml(nombre)}</div>
+                            ${canEdit ? `
+                                <input id="nombreInput" type="text" value="${escapeHtml(nombre)}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                            ` : `
+                                <div class="text-gray-800">${escapeHtml(nombre)}</div>
+                            `}
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Número de Documento</label>
@@ -149,13 +158,26 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Teléfono</label>
-                            <div class="text-gray-800">${telefono || '<span class="text-gray-400">No registrado</span>'}</div>
+                            ${canEdit ? `
+                                <input id="telefonoInput" type="text" value="${escapeHtml(telefono)}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                            ` : `
+                                <div class="text-gray-800">${telefono || '<span class="text-gray-400">No registrado</span>'}</div>
+                            `}
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Dirección</label>
-                            <div class="text-gray-800">${direccion || '<span class="text-gray-400">No registrada</span>'}</div>
+                            ${canEdit ? `
+                                <input id="direccionInput" type="text" value="${escapeHtml(direccion)}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                            ` : `
+                                <div class="text-gray-800">${direccion || '<span class="text-gray-400">No registrada</span>'}</div>
+                            `}
                         </div>
                     </div>
+                    ${canEdit ? `
+                        <div class="mt-6">
+                            <button onclick="guardarPerfil()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-lg font-medium transition">Guardar cambios</button>
+                        </div>
+                    ` : ''}
                 </div>
 
                 ${puedeCambiarContrasena ? `
@@ -187,7 +209,7 @@
                 </div>
                 ` : `
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-amber-100">
-                    <p class="text-gray-700">Solo un administrador puede cambiar contraseñas de usuarios.</p>
+                    <p class="text-gray-700">Los niños no pueden editar datos desde el perfil.</p>
                 </div>
                 `}
 
@@ -251,7 +273,7 @@
                 }
 
                 // Actualizar contraseña
-                const res = await apiFetch(`http://127.0.0.1:8000/usuarios/${usuarioActual.Id}`, {
+                const res = await apiFetch("http://127.0.0.1:8000/auth/me", {
                     method: "PUT",
                     body: JSON.stringify({ Contraseña: passwordNueva })
                 });
@@ -268,6 +290,43 @@
                 }
             } catch (error) {
                 console.error("Error:", error);
+                alert("❌ Error de conexión");
+            }
+        }
+
+        async function guardarPerfil() {
+            const correo = document.getElementById("correoInput")?.value?.trim();
+            const nombre = document.getElementById("nombreInput")?.value?.trim();
+            const telefono = document.getElementById("telefonoInput")?.value?.trim();
+            const direccion = document.getElementById("direccionInput")?.value?.trim();
+
+            if (!correo || !nombre) {
+                alert("❌ El nombre y el correo son obligatorios.");
+                return;
+            }
+
+            try {
+                const res = await apiFetch("http://127.0.0.1:8000/auth/me", {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        Correo: correo,
+                        Persona: {
+                            Nombre: nombre,
+                            Telefono: telefono,
+                            Direccion: direccion
+                        }
+                    })
+                });
+
+                if (res.ok) {
+                    mostrarMensajeExito();
+                    cargarPerfil();
+                } else {
+                    const error = await res.json();
+                    alert("❌ " + (error.detail || "Error al actualizar el perfil"));
+                }
+            } catch (error) {
+                console.error("Error al guardar perfil:", error);
                 alert("❌ Error de conexión");
             }
         }

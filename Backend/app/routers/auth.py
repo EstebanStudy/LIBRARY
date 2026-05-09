@@ -11,7 +11,9 @@ from app.core.config import settings
 from app.core.dependencies import get_current_active_user, get_current_user  # ← clave aquí
 from app.database.db import get_db
 from app.crud.crud_usuario import get_usuario_by_correo, create_usuario
-from app.schemas.usuario import UsuarioCreate, UsuarioResponse
+from app.crud.crud_persona import update_persona
+from app.schemas.usuario import UsuarioCreate, UsuarioResponse, UsuarioProfileUpdate
+from app.schemas.persona import PersonaUpdate
 from app.models.usuario import Usuario
 from app.models.rol import Rol
 
@@ -73,4 +75,31 @@ def register_usuario(
 
 @router.get("/me", response_model=UsuarioResponse)
 def read_users_me(current_user: Usuario = Depends(get_current_active_user)):
+    return current_user
+
+@router.put("/me", response_model=UsuarioResponse)
+def update_users_me(
+    profile_update: UsuarioProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
+    update_data = profile_update.model_dump(exclude_unset=True)
+    persona_data = update_data.pop("Persona", None)
+
+    if "Contraseña" in update_data and update_data["Contraseña"] is not None:
+        salt, password_hash = security.get_password_hash(update_data.pop("Contraseña"))
+        current_user.Salt = salt
+        current_user.PasswordHash = password_hash
+
+    if "Correo" in update_data:
+        current_user.Correo = update_data["Correo"]
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
+    if persona_data:
+        update_persona(db, persona_id=current_user.Persona, persona_update=PersonaUpdate(**persona_data))
+        db.refresh(current_user)
+
     return current_user
